@@ -552,18 +552,26 @@
         }
 
         function redirectToInstagram() {
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            
-            if (isMobile) {
-                // Try opening the app via custom scheme
-                window.location.href = "instagram://user?username=offground.blr";
+            // Enhanced Redirect Logic
+            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+            const isAndroid = /android/i.test(userAgent);
+            const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+
+            if (isAndroid) {
+                // Android Intent (The reliable way for Android)
+                // This tries to open the app (package=com.instagram.android)
+                // If app is not found, it falls back to the HTTPS scheme automatically
+                window.location.href = "intent://www.instagram.com/_u/offground.blr/#Intent;package=com.instagram.android;scheme=https;end";
+            } else if (isIOS) {
+                // iOS: Use Universal Link first (safest and most modern)
+                window.location.href = "https://www.instagram.com/offground.blr/";
                 
-                // Fallback to web link after a short delay if app doesn't open
-                setTimeout(() => {
+                // Fallback attempt (for older devices or if Universal Link fails)
+                setTimeout(function() {
                     window.location.href = "https://www.instagram.com/offground.blr/";
                 }, 500);
             } else {
-                // Desktop / Standard web
+                // Desktop / Others
                 window.location.href = "https://www.instagram.com/offground.blr/";
             }
         }
