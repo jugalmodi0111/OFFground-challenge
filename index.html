@@ -280,9 +280,9 @@
             x: canvas.width / 2,
             y: canvas.height / 2,
             radius: 9,
-            speed: 5, 
-            dx: 3, 
-            dy: 3
+            speed: 7, // Increased initial speed from 5 to 7
+            dx: 4, 
+            dy: 4
         };
 
         let shakeDuration = 0;
@@ -332,9 +332,9 @@
         function resetBall() {
             ball.x = canvas.width / 2;
             ball.y = canvas.height / 2;
-            ball.speed = 5; 
-            ball.dy = (ball.dy > 0 ? -1 : 1) * Math.abs(3); 
-            ball.dx = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2); 
+            ball.speed = 7; // Reset speed to 7
+            ball.dy = (ball.dy > 0 ? -1 : 1) * Math.abs(4); 
+            ball.dx = (Math.random() > 0.5 ? 1 : -1) * (3 + Math.random() * 2); 
         }
 
         function update() {
@@ -367,14 +367,10 @@
             }
 
             // --- AI MOVEMENT (VERY EASY / FALLIBLE) ---
-            // AI reaction delay + Randomness to force misses
             let aiCenter = aiX + paddleWidth / 2;
-            
-            // Slower tracking speed (was 0.85, now 0.55)
             let aiSpeed = ball.speed * 0.55; 
 
-            if (ball.dy < 0) { // Ball moving towards AI
-                // Random error: Sometimes the AI misjudges the ball
+            if (ball.dy < 0) { 
                 let errorOffset = (Math.sin(Date.now() / 200) * 40); 
                 
                 if (aiCenter < ball.x + errorOffset - 20) {
@@ -395,7 +391,7 @@
                     let deltaX = ball.x - (playerX + paddleWidth/2);
                     ball.dx = deltaX * 0.35;
                     
-                    ball.speed += 0.3; 
+                    ball.speed += 0.4; // Faster speed increase
                     
                     let mag = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
                     ball.dx = (ball.dx / mag) * ball.speed;
@@ -412,7 +408,7 @@
                     let deltaX = ball.x - (aiX + paddleWidth/2);
                     ball.dx = deltaX * 0.35;
                     
-                    ball.speed += 0.3;
+                    ball.speed += 0.4; // Faster speed increase
 
                     let mag = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
                     ball.dx = (ball.dx / mag) * ball.speed;
