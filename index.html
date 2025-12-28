@@ -520,7 +520,7 @@
                     let deltaX = ball.x - (aiX + paddleWidth/2);
                     ball.dx = deltaX * 0.35;
                     
-                    ball.speed += 0.1; // Gentle speed increase
+                    ball.speed += 0.2; // Gentle speed increase
 
                     let mag = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
                     ball.dx = (ball.dx / mag) * ball.speed;
