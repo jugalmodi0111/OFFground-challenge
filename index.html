@@ -231,7 +231,7 @@
             osc.stop(audioCtx.currentTime + 0.2);
         }
 
-        // New: Whistle Sound for Game Start
+        // Whistle
         function playWhistle() {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -248,7 +248,7 @@
             osc.stop(audioCtx.currentTime + 0.3);
         }
 
-        // New: Beep for countdown
+        // Beep
         function playBeep(pitch) {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -329,7 +329,7 @@
         const countdownLayer = document.getElementById('countdown-layer');
         const countdownText = document.getElementById('countdown-text');
 
-        const paddleWidth = 85;
+        const paddleWidth = 95; // WIDER FOR EASIER PLAY
         const paddleHeight = 22; 
         
         let gameState = 'MENU'; 
@@ -347,9 +347,9 @@
             x: canvas.width / 2,
             y: canvas.height / 2,
             radius: 9,
-            speed: 5, // REDUCED FROM 7
-            dx: 3, // REDUCED FROM 4
-            dy: 3  // REDUCED FROM 4
+            speed: 3.5, // REDUCED SIGNIFICANTLY (Was 5, then 7)
+            dx: 2.5, 
+            dy: 2.5
         };
 
         let shakeDuration = 0;
@@ -429,9 +429,9 @@
         function resetBall() {
             ball.x = canvas.width / 2;
             ball.y = canvas.height / 2;
-            ball.speed = 5; // Reset to 5
-            ball.dy = (ball.dy > 0 ? -1 : 1) * Math.abs(3); 
-            ball.dx = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2); 
+            ball.speed = 3.5; // Reset to 3.5
+            ball.dy = (ball.dy > 0 ? -1 : 1) * Math.abs(2.5); 
+            ball.dx = (Math.random() > 0.5 ? 1 : -1) * (1.5 + Math.random() * 1.5); 
         }
 
         function update() {
@@ -487,7 +487,7 @@
                     let deltaX = ball.x - (playerX + paddleWidth/2);
                     ball.dx = deltaX * 0.35;
                     
-                    ball.speed += 0.2; // REDUCED INCREASE
+                    ball.speed += 0.15; // VERY GRADUAL INCREASE
                     
                     let mag = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
                     ball.dx = (ball.dx / mag) * ball.speed;
@@ -504,7 +504,7 @@
                     let deltaX = ball.x - (aiX + paddleWidth/2);
                     ball.dx = deltaX * 0.35;
                     
-                    ball.speed += 0.2; // REDUCED INCREASE
+                    ball.speed += 0.15; // VERY GRADUAL INCREASE
 
                     let mag = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
                     ball.dx = (ball.dx / mag) * ball.speed;
