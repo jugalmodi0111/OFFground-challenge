@@ -26,7 +26,6 @@
             background-color: #1a1a1a;
         }
 
-        /* Arcade Grid Background */
         body::before {
             content: "";
             position: absolute;
@@ -287,9 +286,7 @@
         };
 
         let shakeDuration = 0;
-        
-        // --- NEW: GLOW EFFECT VARIABLE ---
-        let playerHitGlow = 0; // 0.0 to 1.0 intensity
+        let playerHitGlow = 0; 
 
         // --- INPUT HANDLING ---
         function handleInput(clientX) {
@@ -326,7 +323,7 @@
             uiLayer.classList.add('hidden');
             
             gameEndTime = performance.now() + FALLBACK_DURATION;
-            playerHitGlow = 0; // Reset glow
+            playerHitGlow = 0; 
 
             resetBall();
             requestAnimationFrame(loop);
@@ -343,11 +340,13 @@
         function update() {
             if (gameState !== 'PLAYING') return;
 
+            // Timer Win
             if (performance.now() > gameEndTime) {
                 endGame("TIME'S UP!");
                 return;
             }
 
+            // Points Win
             if (playerScore >= WIN_SCORE) {
                 endGame("MATCH POINT!");
                 return;
@@ -367,15 +366,27 @@
                 playSound('hit');
             }
 
-            // AI Movement
+            // --- AI MOVEMENT (VERY EASY / FALLIBLE) ---
+            // AI reaction delay + Randomness to force misses
             let aiCenter = aiX + paddleWidth / 2;
-            let aiSpeed = ball.speed * 0.85; 
-            if (ball.dy < 0) { 
-                 if (aiCenter < ball.x - 20) aiX += aiSpeed;
-                 else if (aiCenter > ball.x + 20) aiX -= aiSpeed;
+            
+            // Slower tracking speed (was 0.85, now 0.55)
+            let aiSpeed = ball.speed * 0.55; 
+
+            if (ball.dy < 0) { // Ball moving towards AI
+                // Random error: Sometimes the AI misjudges the ball
+                let errorOffset = (Math.sin(Date.now() / 200) * 40); 
+                
+                if (aiCenter < ball.x + errorOffset - 20) {
+                    aiX += aiSpeed;
+                } else if (aiCenter > ball.x + errorOffset + 20) {
+                    aiX -= aiSpeed;
+                }
             }
+            
             if (aiX < 0) aiX = 0;
             if (aiX > canvas.width - paddleWidth) aiX = canvas.width - paddleWidth;
+            // ------------------------------------------
 
             // Paddle Collisions (Player)
             if (ball.y + ball.radius > canvas.height - 40 && ball.y < canvas.height - 10 &&
@@ -391,8 +402,6 @@
                     ball.dy = (ball.dy / mag) * ball.speed;
                     shakeDuration = 5;
                     playSound('hit');
-                    
-                    // Trigger Glow
                     playerHitGlow = 1.0; 
             }
 
@@ -479,26 +488,20 @@
             ctx.fillStyle = COLOR_BLUE; 
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // --- DRAW SUBTLE GLOW IF ACTIVE ---
             if (playerHitGlow > 0.01) {
                 ctx.save();
-                // Create gradient at bottom center
                 const gradient = ctx.createRadialGradient(
                     canvas.width / 2, canvas.height + 50, 20, 
                     canvas.width / 2, canvas.height, 400
                 );
-                // Very faint white/blue glow
                 gradient.addColorStop(0, `rgba(255, 255, 255, ${playerHitGlow * 0.3})`); 
                 gradient.addColorStop(1, `rgba(0, 35, 155, 0)`);
                 
                 ctx.fillStyle = gradient;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.restore();
-                
-                // Fade out
                 playerHitGlow *= 0.92;
             }
-            // -----------------------------------
 
             // Court
             ctx.strokeStyle = COLOR_SAND;
@@ -550,4 +553,3 @@
     </script>
 </body>
 </html>
-
