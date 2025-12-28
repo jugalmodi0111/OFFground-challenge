@@ -457,22 +457,24 @@
             ball.x += ball.dx;
             ball.y += ball.dy;
             
-            // Wall Collisions
-            if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) {
-                ball.dx = -ball.dx;
+            // --- FIX 1: WALL COLLISIONS WITH POSITIONAL CORRECTION ---
+            // We push the ball back inside the canvas before reversing velocity
+            if (ball.x - ball.radius < 0) {
+                ball.x = ball.radius; // Push out
+                ball.dx = Math.abs(ball.dx); // Force move right
+                playSound('hit');
+            } else if (ball.x + ball.radius > canvas.width) {
+                ball.x = canvas.width - ball.radius; // Push out
+                ball.dx = -Math.abs(ball.dx); // Force move left
                 playSound('hit');
             }
 
-            // --- AI MOVEMENT (VERY EASY / FALLIBLE) ---
+            // --- AI MOVEMENT ---
             let aiCenter = aiX + paddleWidth / 2;
-            
-            // Much slower reaction (0.45 tracking speed)
             let aiSpeed = ball.speed * 0.45; 
 
-            if (ball.dy < 0) { // Ball moving towards AI
-                // Increase error margin (60px wobble instead of 40)
+            if (ball.dy < 0) { 
                 let errorOffset = (Math.sin(Date.now() / 250) * 60); 
-                
                 if (aiCenter < ball.x + errorOffset - 25) {
                     aiX += aiSpeed;
                 } else if (aiCenter > ball.x + errorOffset + 25) {
@@ -482,16 +484,21 @@
             
             if (aiX < 0) aiX = 0;
             if (aiX > canvas.width - paddleWidth) aiX = canvas.width - paddleWidth;
-            // ------------------------------------------
 
+            // --- FIX 2: PADDLE COLLISIONS WITH POSITIONAL CORRECTION ---
+            
             // Paddle Collisions (Player)
             if (ball.y + ball.radius > canvas.height - 40 && ball.y < canvas.height - 10 &&
                 ball.x > playerX && ball.x < playerX + paddleWidth) {
+                    
+                    // Push ball OUT of the paddle immediately
+                    ball.y = canvas.height - 40 - ball.radius - 1;
+
                     ball.dy = -Math.abs(ball.dy);
                     let deltaX = ball.x - (playerX + paddleWidth/2);
                     ball.dx = deltaX * 0.35;
                     
-                    ball.speed += 0.1; // Gentle speed increase
+                    ball.speed += 0.1; 
                     
                     let mag = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
                     ball.dx = (ball.dx / mag) * ball.speed;
@@ -504,11 +511,15 @@
             // Paddle Collisions (AI)
             if (ball.y - ball.radius < 40 && ball.y > 10 &&
                 ball.x > aiX && ball.x < aiX + paddleWidth) {
+                    
+                    // Push ball OUT of the paddle immediately
+                    ball.y = 40 + ball.radius + 1;
+
                     ball.dy = Math.abs(ball.dy);
                     let deltaX = ball.x - (aiX + paddleWidth/2);
                     ball.dx = deltaX * 0.35;
                     
-                    ball.speed += 0.1; // Gentle speed increase
+                    ball.speed += 0.1;
 
                     let mag = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
                     ball.dx = (ball.dx / mag) * ball.speed;
