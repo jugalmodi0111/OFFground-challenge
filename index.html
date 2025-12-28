@@ -6,8 +6,6 @@
     <title>OFFground Challenge</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-        
-        /* Font stack for scoreboard */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500&display=swap');
 
         :root {
@@ -145,7 +143,6 @@
 
             <div id="end-screen" class="center-content hidden">
                 <p id="end-message" class="end-game-text"></p>
-                <!-- Logo Removed as requested -->
             </div>
         </div>
     </div>
@@ -158,7 +155,7 @@
         const COLOR_DARK = style.getPropertyValue('--color-dark').trim();
         const COLOR_BALL = style.getPropertyValue('--color-ball').trim();
         
-        // --- AUDIO SYSTEM (FUNK/ARCADE SYNTH) ---
+        // --- AUDIO SYSTEM ---
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         const audioCtx = new AudioContext();
         let musicInterval = null;
@@ -172,14 +169,12 @@
             osc.type = type;
             osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
 
-            // Funky Filter envelope
             filter.type = "lowpass";
             filter.frequency.setValueAtTime(200, audioCtx.currentTime);
             filter.frequency.exponentialRampToValueAtTime(3000, audioCtx.currentTime + 0.05);
             filter.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + duration);
             filter.Q.value = 5; 
 
-            // Volume Envelope
             gain.gain.setValueAtTime(0, audioCtx.currentTime);
             gain.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + 0.02);
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
@@ -209,23 +204,17 @@
             if (audioCtx.state === 'suspended') audioCtx.resume();
             if (musicInterval) return;
 
-            // Simple "Funk/Arcade" bass loop sequence (E minor pentatonic ish)
             const bassLine = [82.41, 0, 98.00, 0, 110.00, 123.47, 82.41, 98.00]; 
-            const speed = 250; // ms per beat
+            const speed = 250;
 
             musicInterval = setInterval(() => {
                 const freq = bassLine[noteIndex % bassLine.length];
-                
-                // Bass Note - Reduced volume from 0.04 to ~0.025 (-2dB approx)
                 if (freq > 0) {
                     playSynthNote(freq, 'sawtooth', 0.4, 0.025); 
                 }
-
-                // Kick
                 if (noteIndex % 2 === 0) {
                     playKick();
                 }
-
                 noteIndex++;
             }, speed);
         }
@@ -281,15 +270,13 @@
         let playerScore = 0;
         let aiScore = 0;
         
-        // 20 Second Fallback Timer
         let gameEndTime = 0; 
-        const FALLBACK_DURATION = 20000; // 20 seconds
+        const FALLBACK_DURATION = 20000; 
         const WIN_SCORE = 3;
 
         let playerX = canvas.width / 2 - paddleWidth / 2;
         let aiX = canvas.width / 2 - paddleWidth / 2;
         
-        // Initial Ball State
         let ball = {
             x: canvas.width / 2,
             y: canvas.height / 2,
@@ -300,6 +287,9 @@
         };
 
         let shakeDuration = 0;
+        
+        // --- NEW: GLOW EFFECT VARIABLE ---
+        let playerHitGlow = 0; // 0.0 to 1.0 intensity
 
         // --- INPUT HANDLING ---
         function handleInput(clientX) {
@@ -335,8 +325,8 @@
             endScreen.classList.add('hidden');
             uiLayer.classList.add('hidden');
             
-            // Set end time for fallback
             gameEndTime = performance.now() + FALLBACK_DURATION;
+            playerHitGlow = 0; // Reset glow
 
             resetBall();
             requestAnimationFrame(loop);
@@ -345,7 +335,7 @@
         function resetBall() {
             ball.x = canvas.width / 2;
             ball.y = canvas.height / 2;
-            ball.speed = 5; // Reset speed on point
+            ball.speed = 5; 
             ball.dy = (ball.dy > 0 ? -1 : 1) * Math.abs(3); 
             ball.dx = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2); 
         }
@@ -353,13 +343,11 @@
         function update() {
             if (gameState !== 'PLAYING') return;
 
-            // 1. Check Fallback Timer (20s)
             if (performance.now() > gameEndTime) {
                 endGame("TIME'S UP!");
                 return;
             }
 
-            // 2. Check Score Win Condition
             if (playerScore >= WIN_SCORE) {
                 endGame("MATCH POINT!");
                 return;
@@ -396,7 +384,6 @@
                     let deltaX = ball.x - (playerX + paddleWidth/2);
                     ball.dx = deltaX * 0.35;
                     
-                    // Progressive Speed Increase
                     ball.speed += 0.3; 
                     
                     let mag = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
@@ -404,6 +391,9 @@
                     ball.dy = (ball.dy / mag) * ball.speed;
                     shakeDuration = 5;
                     playSound('hit');
+                    
+                    // Trigger Glow
+                    playerHitGlow = 1.0; 
             }
 
             // Paddle Collisions (AI)
@@ -413,7 +403,6 @@
                     let deltaX = ball.x - (aiX + paddleWidth/2);
                     ball.dx = deltaX * 0.35;
                     
-                    // Progressive Speed Increase
                     ball.speed += 0.3;
 
                     let mag = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
@@ -438,8 +427,6 @@
             uiLayer.classList.remove('hidden');
             startScreen.classList.add('hidden');
             endScreen.classList.remove('hidden');
-
-            // Force "User Wins" message always
             endMessage.innerHTML = "YOU WON!<br>CAN YOU DO THE SAME AT OFFGROUND?";
             playSound('win');
         }
@@ -492,6 +479,27 @@
             ctx.fillStyle = COLOR_BLUE; 
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            // --- DRAW SUBTLE GLOW IF ACTIVE ---
+            if (playerHitGlow > 0.01) {
+                ctx.save();
+                // Create gradient at bottom center
+                const gradient = ctx.createRadialGradient(
+                    canvas.width / 2, canvas.height + 50, 20, 
+                    canvas.width / 2, canvas.height, 400
+                );
+                // Very faint white/blue glow
+                gradient.addColorStop(0, `rgba(255, 255, 255, ${playerHitGlow * 0.3})`); 
+                gradient.addColorStop(1, `rgba(0, 35, 155, 0)`);
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.restore();
+                
+                // Fade out
+                playerHitGlow *= 0.92;
+            }
+            // -----------------------------------
+
             // Court
             ctx.strokeStyle = COLOR_SAND;
             ctx.lineWidth = 3;
@@ -542,3 +550,4 @@
     </script>
 </body>
 </html>
+
