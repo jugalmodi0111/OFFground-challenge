@@ -329,7 +329,7 @@
         const countdownLayer = document.getElementById('countdown-layer');
         const countdownText = document.getElementById('countdown-text');
 
-        const paddleWidth = 95; // WIDER FOR EASIER PLAY
+        const paddleWidth = 100; // EVEN WIDER FOR BEGINNERS
         const paddleHeight = 22; 
         
         let gameState = 'MENU'; 
@@ -347,9 +347,9 @@
             x: canvas.width / 2,
             y: canvas.height / 2,
             radius: 9,
-            speed: 3.5, // REDUCED SIGNIFICANTLY (Was 5, then 7)
-            dx: 2.5, 
-            dy: 2.5
+            speed: 3.2, // VERY SLOW AND MANAGEABLE
+            dx: 2.2, 
+            dy: 2.2
         };
 
         let shakeDuration = 0;
@@ -429,8 +429,8 @@
         function resetBall() {
             ball.x = canvas.width / 2;
             ball.y = canvas.height / 2;
-            ball.speed = 3.5; // Reset to 3.5
-            ball.dy = (ball.dy > 0 ? -1 : 1) * Math.abs(2.5); 
+            ball.speed = 3.2; // Reset to 3.2
+            ball.dy = (ball.dy > 0 ? -1 : 1) * Math.abs(2.2); 
             ball.dx = (Math.random() > 0.5 ? 1 : -1) * (1.5 + Math.random() * 1.5); 
         }
 
@@ -463,22 +463,26 @@
                 playSound('hit');
             }
 
-            // --- AI MOVEMENT ---
+            // --- AI MOVEMENT (VERY EASY / FALLIBLE) ---
             let aiCenter = aiX + paddleWidth / 2;
-            let aiSpeed = ball.speed * 0.55; 
+            
+            // Much slower reaction (0.45 tracking speed)
+            let aiSpeed = ball.speed * 0.45; 
 
-            if (ball.dy < 0) { 
-                let errorOffset = (Math.sin(Date.now() / 200) * 40); 
+            if (ball.dy < 0) { // Ball moving towards AI
+                // Increase error margin (60px wobble instead of 40)
+                let errorOffset = (Math.sin(Date.now() / 250) * 60); 
                 
-                if (aiCenter < ball.x + errorOffset - 20) {
+                if (aiCenter < ball.x + errorOffset - 25) {
                     aiX += aiSpeed;
-                } else if (aiCenter > ball.x + errorOffset + 20) {
+                } else if (aiCenter > ball.x + errorOffset + 25) {
                     aiX -= aiSpeed;
                 }
             }
             
             if (aiX < 0) aiX = 0;
             if (aiX > canvas.width - paddleWidth) aiX = canvas.width - paddleWidth;
+            // ------------------------------------------
 
             // Paddle Collisions (Player)
             if (ball.y + ball.radius > canvas.height - 40 && ball.y < canvas.height - 10 &&
@@ -487,7 +491,7 @@
                     let deltaX = ball.x - (playerX + paddleWidth/2);
                     ball.dx = deltaX * 0.35;
                     
-                    ball.speed += 0.15; // VERY GRADUAL INCREASE
+                    ball.speed += 0.1; // Gentle speed increase
                     
                     let mag = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
                     ball.dx = (ball.dx / mag) * ball.speed;
@@ -504,7 +508,7 @@
                     let deltaX = ball.x - (aiX + paddleWidth/2);
                     ball.dx = deltaX * 0.35;
                     
-                    ball.speed += 0.15; // VERY GRADUAL INCREASE
+                    ball.speed += 0.1; // Gentle speed increase
 
                     let mag = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
                     ball.dx = (ball.dx / mag) * ball.speed;
