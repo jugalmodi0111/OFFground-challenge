@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OFFground Challenge</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        /* Font stack for scoreboard */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500&display=swap');
+
+        :root {
+            --color-blue: #00239b;
+            --color-sand: #aea593;
+            --color-dark: #2a2829;
+            --color-light: #f5f5f7;
+            --color-ball: #FFD700;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            touch-action: none;
+            background-color: #1a1a1a;
+        }
+
+        /* Arcade Grid Background */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(var(--color-dark) 1px, transparent 1px),
+                linear-gradient(90deg, var(--color-dark) 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.2;
+            z-index: -1;
+        }
+
+        body {
+            color: var(--color-sand);
+            font-family: 'Press Start 2P', cursive;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+            cursor: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAADxpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iPjwveDp4bXBtZXRhPgpJcT0OAAAAnklEQVQ4y2NkwAkY8Wj+/x9IgIUhgM141ABGPCr//wdjBqgAIn/9////53//GZgY0YUZGRlYmRgYmBjQ+SBxYgAZiG4AIf0gD5AAtwEwWzF0ozgA5RsgPgM2H0wDYwN8sUBtAAXJ0YgNILoBYuOByAZQYQOojQ+iG0B+gNgE39qAkAbQYwN2A2Bq0WODkAbQgY7N+KExB0Y6YwA+vX3738o6XAAAAABJRU5ErkJggg==') 0 16, auto;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: var(--color-light);
+            text-shadow: 3px 3px var(--color-blue);
+            letter-spacing: 2px;
+            text-align: center;
+            text-transform: uppercase;
+            z-index: 2;
+        }
+
+        #game-container {
+            position: relative;
+            border: 6px solid var(--color-sand);
+            box-shadow: 0 0 50px rgba(0, 35, 155, 0.6), inset 0 0 20px var(--color-dark);
+            max-width: 95vw;
+            max-height: 80vh;
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+            background-color: var(--color-blue);
+            max-width: 100%;
+            height: auto;
+            touch-action: none;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(42, 40, 41, 0.9);
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+            transition: opacity 0.3s ease;
+            z-index: 10;
+        }
+
+        .center-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .end-game-text {
+            font-size: 16px;
+            line-height: 1.8;
+            color: var(--color-ball);
+            margin-bottom: 30px;
+            text-shadow: 2px 2px var(--color-blue);
+            max-width: 90%;
+            text-transform: uppercase;
+        }
+
+        .blink {
+            animation: blinker 0.8s steps(1) infinite;
+        }
+
+        @keyframes blinker {
+            50% { opacity: 0; }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>OFFground Challenge</h1>
+    
+    <div id="game-container">
+        <canvas id="gameCanvas" width="420" height="640"></canvas>
+        
+        <div id="ui-layer">
+            <div id="start-screen" class="center-content">
+                <p class="blink" style="font-size: 18px; color: var(--color-light);">TAP TO START</p>
+                <p style="font-size: 10px; margin-top:20px; color: var(--color-sand);">CONTROL THE RACQUET</p>
+            </div>
+
+            <div id="end-screen" class="center-content hidden">
+                <p id="end-message" class="end-game-text"></p>
+                <!-- Logo Removed as requested -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const style = getComputedStyle(document.body);
+        const COLOR_BLUE = style.getPropertyValue('--color-blue').trim();
+        const COLOR_SAND = style.getPropertyValue('--color-sand').trim();
+        const COLOR_DARK = style.getPropertyValue('--color-dark').trim();
+        const COLOR_BALL = style.getPropertyValue('--color-ball').trim();
+        
+        // --- AUDIO SYSTEM (FUNK/ARCADE SYNTH) ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContext();
+        let musicInterval = null;
+        let noteIndex = 0;
+
+        function playSynthNote(freq, type, duration, vol) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+            // Funky Filter envelope
+            filter.type = "lowpass";
+            filter.frequency.setValueAtTime(200, audioCtx.currentTime);
+            filter.frequency.exponentialRampToValueAtTime(3000, audioCtx.currentTime + 0.05);
+            filter.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + duration);
+            filter.Q.value = 5; 
+
+            // Volume Envelope
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function playKick() {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.2);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime); 
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.2);
+        }
+
+        function startMusic() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (musicInterval) return;
+
+            // Simple "Funk/Arcade" bass loop sequence (E minor pentatonic ish)
+            const bassLine = [82.41, 0, 98.00, 0, 110.00, 123.47, 82.41, 98.00]; 
+            const speed = 250; // ms per beat
+
+            musicInterval = setInterval(() => {
+                const freq = bassLine[noteIndex % bassLine.length];
+                
+                // Bass Note - Reduced volume from 0.04 to ~0.025 (-2dB approx)
+                if (freq > 0) {
+                    playSynthNote(freq, 'sawtooth', 0.4, 0.025); 
+                }
+
+                // Kick
+                if (noteIndex % 2 === 0) {
+                    playKick();
+                }
+
+                noteIndex++;
+            }, speed);
+        }
+
+        function stopMusic() {
+            if (musicInterval) {
+                clearInterval(musicInterval);
+                musicInterval = null;
+            }
+        }
+
+        function playSound(type) {
+            const now = audioCtx.currentTime;
+            if (type === 'hit') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.linearRampToValueAtTime(100, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.1);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'win') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.setValueAtTime(880, now + 0.2);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.5);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            }
+        }
+
+        // --- GAME VARIABLES ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const uiLayer = document.getElementById('ui-layer');
+        const startScreen = document.getElementById('start-screen');
+        const endScreen = document.getElementById('end-screen');
+        const endMessage = document.getElementById('end-message');
+
+        const paddleWidth = 85;
+        const paddleHeight = 22; 
+        
+        let gameState = 'MENU'; 
+        let playerScore = 0;
+        let aiScore = 0;
+        
+        // 20 Second Fallback Timer
+        let gameEndTime = 0; 
+        const FALLBACK_DURATION = 20000; // 20 seconds
+        const WIN_SCORE = 3;
+
+        let playerX = canvas.width / 2 - paddleWidth / 2;
+        let aiX = canvas.width / 2 - paddleWidth / 2;
+        
+        // Initial Ball State
+        let ball = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 9,
+            speed: 5, 
+            dx: 3, 
+            dy: 3
+        };
+
+        let shakeDuration = 0;
+
+        // --- INPUT HANDLING ---
+        function handleInput(clientX) {
+            if (gameState !== 'PLAYING') return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            let inputX = (clientX - rect.left) * scaleX;
+            playerX = inputX - paddleWidth / 2;
+            if (playerX < 0) playerX = 0;
+            if (playerX > canvas.width - paddleWidth) playerX = canvas.width - paddleWidth;
+        }
+
+        canvas.addEventListener('mousemove', (e) => handleInput(e.clientX));
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleInput(e.touches[0].clientX); }, { passive: false });
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e.touches[0].clientX); }, { passive: false });
+
+        function handleUIInteraction(e) {
+            if (e.type === 'touchstart') e.preventDefault();
+            if (gameState === 'MENU' || gameState === 'GAME_OVER') {
+                startMusic();
+                resetGame();
+            }
+        }
+        uiLayer.addEventListener('click', handleUIInteraction);
+        uiLayer.addEventListener('touchstart', handleUIInteraction, { passive: false });
+
+        // --- GAME LOOP ---
+        function resetGame() {
+            playerScore = 0;
+            aiScore = 0;
+            gameState = 'PLAYING';
+            startScreen.classList.add('hidden');
+            endScreen.classList.add('hidden');
+            uiLayer.classList.add('hidden');
+            
+            // Set end time for fallback
+            gameEndTime = performance.now() + FALLBACK_DURATION;
+
+            resetBall();
+            requestAnimationFrame(loop);
+        }
+
+        function resetBall() {
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+            ball.speed = 5; // Reset speed on point
+            ball.dy = (ball.dy > 0 ? -1 : 1) * Math.abs(3); 
+            ball.dx = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2); 
+        }
+
+        function update() {
+            if (gameState !== 'PLAYING') return;
+
+            // 1. Check Fallback Timer (20s)
+            if (performance.now() > gameEndTime) {
+                endGame("TIME'S UP!");
+                return;
+            }
+
+            // 2. Check Score Win Condition
+            if (playerScore >= WIN_SCORE) {
+                endGame("MATCH POINT!");
+                return;
+            }
+            if (aiScore >= WIN_SCORE) {
+                 endGame("GAME OVER!");
+                 return;
+            }
+
+            // Move Ball
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+            
+            // Wall Collisions
+            if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) {
+                ball.dx = -ball.dx;
+                playSound('hit');
+            }
+
+            // AI Movement
+            let aiCenter = aiX + paddleWidth / 2;
+            let aiSpeed = ball.speed * 0.85; 
+            if (ball.dy < 0) { 
+                 if (aiCenter < ball.x - 20) aiX += aiSpeed;
+                 else if (aiCenter > ball.x + 20) aiX -= aiSpeed;
+            }
+            if (aiX < 0) aiX = 0;
+            if (aiX > canvas.width - paddleWidth) aiX = canvas.width - paddleWidth;
+
+            // Paddle Collisions (Player)
+            if (ball.y + ball.radius > canvas.height - 40 && ball.y < canvas.height - 10 &&
+                ball.x > playerX && ball.x < playerX + paddleWidth) {
+                    ball.dy = -Math.abs(ball.dy);
+                    let deltaX = ball.x - (playerX + paddleWidth/2);
+                    ball.dx = deltaX * 0.35;
+                    
+                    // Progressive Speed Increase
+                    ball.speed += 0.3; 
+                    
+                    let mag = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
+                    ball.dx = (ball.dx / mag) * ball.speed;
+                    ball.dy = (ball.dy / mag) * ball.speed;
+                    shakeDuration = 5;
+                    playSound('hit');
+            }
+
+            // Paddle Collisions (AI)
+            if (ball.y - ball.radius < 40 && ball.y > 10 &&
+                ball.x > aiX && ball.x < aiX + paddleWidth) {
+                    ball.dy = Math.abs(ball.dy);
+                    let deltaX = ball.x - (aiX + paddleWidth/2);
+                    ball.dx = deltaX * 0.35;
+                    
+                    // Progressive Speed Increase
+                    ball.speed += 0.3;
+
+                    let mag = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
+                    ball.dx = (ball.dx / mag) * ball.speed;
+                    ball.dy = (ball.dy / mag) * ball.speed;
+                    shakeDuration = 5;
+                    playSound('hit');
+            }
+
+            // Scoring
+            if (ball.y > canvas.height + 50) {
+                aiScore++;
+                resetBall();
+            } else if (ball.y < -50) {
+                playerScore++;
+                resetBall();
+            }
+        }
+
+        function endGame(reason) {
+            gameState = 'GAME_OVER';
+            uiLayer.classList.remove('hidden');
+            startScreen.classList.add('hidden');
+            endScreen.classList.remove('hidden');
+
+            // Force "User Wins" message always
+            endMessage.innerHTML = "YOU WON!<br>CAN YOU DO THE SAME AT OFFGROUND?";
+            playSound('win');
+        }
+
+        function drawRacquet(x, y, isPlayer) {
+            ctx.save();
+            ctx.fillStyle = COLOR_DARK;
+            ctx.strokeStyle = COLOR_SAND;
+            ctx.lineWidth = 3;
+
+            const handleW = 10;
+            const handleH = 20;
+            const handleX = x + paddleWidth/2 - handleW/2;
+            const handleY = isPlayer ? y + paddleHeight : y - handleH;
+            
+            ctx.fillStyle = "#4a4a4a"; 
+            ctx.fillRect(handleX, handleY, handleW, handleH);
+
+            ctx.fillStyle = COLOR_DARK;
+            ctx.beginPath();
+            ctx.roundRect(x, y, paddleWidth, paddleHeight, 10);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.strokeStyle = "#333";
+            ctx.lineWidth = 1;
+            for(let i=10; i<paddleWidth; i+=10) {
+                ctx.moveTo(x + i, y);
+                ctx.lineTo(x + i, y + paddleHeight);
+            }
+            for(let i=5; i<paddleHeight; i+=5) {
+                ctx.moveTo(x, y + i);
+                ctx.lineTo(x + paddleWidth, y + i);
+            }
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function draw() {
+            ctx.save();
+            
+            if (shakeDuration > 0) {
+                let dx = (Math.random() - 0.5) * 8;
+                let dy = (Math.random() - 0.5) * 8;
+                ctx.translate(dx, dy);
+                shakeDuration--;
+            }
+
+            ctx.fillStyle = COLOR_BLUE; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Court
+            ctx.strokeStyle = COLOR_SAND;
+            ctx.lineWidth = 3;
+            const kitchenDist = 180;
+            ctx.beginPath(); ctx.moveTo(0, kitchenDist); ctx.lineTo(canvas.width, kitchenDist); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, canvas.height - kitchenDist); ctx.lineTo(canvas.width, canvas.height - kitchenDist); ctx.stroke();
+            ctx.setLineDash([15, 15]);
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0); ctx.lineTo(canvas.width / 2, kitchenDist);
+            ctx.moveTo(canvas.width / 2, canvas.height - kitchenDist); ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.lineWidth = 6; ctx.strokeStyle = COLOR_DARK;
+            ctx.beginPath(); ctx.moveTo(0, canvas.height / 2); ctx.lineTo(canvas.width, canvas.height / 2); ctx.stroke();
+            ctx.lineWidth = 3; ctx.strokeStyle = "#fff";
+            ctx.beginPath(); ctx.moveTo(0, canvas.height / 2 - 3); ctx.lineTo(canvas.width, canvas.height / 2 - 3); ctx.stroke();
+
+            // Racquets & Ball
+            drawRacquet(playerX, canvas.height - 40, true);
+            drawRacquet(aiX, 20, false);
+
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = COLOR_BALL;
+            ctx.fill();
+            ctx.strokeStyle = COLOR_DARK;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Scoreboard (Neue Haas Grotesk)
+            ctx.fillStyle = COLOR_SAND;
+            ctx.font = "500 32px 'Neue Haas Grotesk', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(`${aiScore} - ${playerScore}`, canvas.width / 2, canvas.height / 2 + 55); 
+
+            ctx.restore();
+        }
+
+        function loop() {
+            if (gameState === 'PLAYING') {
+                update();
+                draw();
+                requestAnimationFrame(loop);
+            }
+        }
+        
+        draw();
+    </script>
+</body>
+</html>
