@@ -372,7 +372,8 @@
 
         function handleUIInteraction(e) {
             if (e.type === 'touchstart') e.preventDefault();
-            if (gameState === 'MENU' || gameState === 'GAME_OVER') {
+            // REMOVED 'GAME_OVER' check to prevent restart click, redirect is now automatic
+            if (gameState === 'MENU') {
                 if (audioCtx.state === 'suspended') audioCtx.resume();
                 startCountdown();
             }
@@ -457,24 +458,27 @@
             ball.x += ball.dx;
             ball.y += ball.dy;
             
-            // --- FIX 1: WALL COLLISIONS WITH POSITIONAL CORRECTION ---
-            // We push the ball back inside the canvas before reversing velocity
+            // Wall Collisions with Fix
             if (ball.x - ball.radius < 0) {
-                ball.x = ball.radius; // Push out
-                ball.dx = Math.abs(ball.dx); // Force move right
+                ball.x = ball.radius; 
+                ball.dx = Math.abs(ball.dx); 
                 playSound('hit');
             } else if (ball.x + ball.radius > canvas.width) {
-                ball.x = canvas.width - ball.radius; // Push out
-                ball.dx = -Math.abs(ball.dx); // Force move left
+                ball.x = canvas.width - ball.radius; 
+                ball.dx = -Math.abs(ball.dx); 
                 playSound('hit');
             }
 
-            // --- AI MOVEMENT ---
+            // --- AI MOVEMENT (VERY EASY / FALLIBLE) ---
             let aiCenter = aiX + paddleWidth / 2;
+            
+            // Much slower reaction (0.45 tracking speed)
             let aiSpeed = ball.speed * 0.45; 
 
-            if (ball.dy < 0) { 
+            if (ball.dy < 0) { // Ball moving towards AI
+                // Increase error margin (60px wobble instead of 40)
                 let errorOffset = (Math.sin(Date.now() / 250) * 60); 
+                
                 if (aiCenter < ball.x + errorOffset - 25) {
                     aiX += aiSpeed;
                 } else if (aiCenter > ball.x + errorOffset + 25) {
@@ -484,21 +488,19 @@
             
             if (aiX < 0) aiX = 0;
             if (aiX > canvas.width - paddleWidth) aiX = canvas.width - paddleWidth;
+            // ------------------------------------------
 
-            // --- FIX 2: PADDLE COLLISIONS WITH POSITIONAL CORRECTION ---
-            
             // Paddle Collisions (Player)
             if (ball.y + ball.radius > canvas.height - 40 && ball.y < canvas.height - 10 &&
                 ball.x > playerX && ball.x < playerX + paddleWidth) {
                     
-                    // Push ball OUT of the paddle immediately
-                    ball.y = canvas.height - 40 - ball.radius - 1;
+                    ball.y = canvas.height - 40 - ball.radius - 1; // Push out
 
                     ball.dy = -Math.abs(ball.dy);
                     let deltaX = ball.x - (playerX + paddleWidth/2);
                     ball.dx = deltaX * 0.35;
                     
-                    ball.speed += 0.1; 
+                    ball.speed += 0.1; // Gentle speed increase
                     
                     let mag = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
                     ball.dx = (ball.dx / mag) * ball.speed;
@@ -512,14 +514,13 @@
             if (ball.y - ball.radius < 40 && ball.y > 10 &&
                 ball.x > aiX && ball.x < aiX + paddleWidth) {
                     
-                    // Push ball OUT of the paddle immediately
-                    ball.y = 40 + ball.radius + 1;
+                    ball.y = 40 + ball.radius + 1; // Push out
 
                     ball.dy = Math.abs(ball.dy);
                     let deltaX = ball.x - (aiX + paddleWidth/2);
                     ball.dx = deltaX * 0.35;
                     
-                    ball.speed += 0.1;
+                    ball.speed += 0.1; // Gentle speed increase
 
                     let mag = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
                     ball.dx = (ball.dx / mag) * ball.speed;
@@ -543,8 +544,28 @@
             uiLayer.classList.remove('hidden');
             startScreen.classList.add('hidden');
             endScreen.classList.remove('hidden');
-            endMessage.innerHTML = "WELL PLAYED!<br>CAN YOU DO THE SAME AT OFFGROUND?";
+            endMessage.innerHTML = "WELL PLAYED!<br>SEE YOU AT OFFGROUND!";
             playSound('win');
+            
+            // REDIRECT LOGIC
+            setTimeout(redirectToInstagram, 4000); // 4 second cooldown
+        }
+
+        function redirectToInstagram() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                // Try opening the app via custom scheme
+                window.location.href = "instagram://user?username=offground.blr";
+                
+                // Fallback to web link after a short delay if app doesn't open
+                setTimeout(() => {
+                    window.location.href = "https://www.instagram.com/offground.blr/";
+                }, 500);
+            } else {
+                // Desktop / Standard web
+                window.location.href = "https://www.instagram.com/offground.blr/";
+            }
         }
 
         function drawRacquet(x, y, isPlayer) {
